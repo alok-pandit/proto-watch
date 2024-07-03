@@ -1,0 +1,2 @@
+watch-folder: "src/models"
+out-folder: "proto"
