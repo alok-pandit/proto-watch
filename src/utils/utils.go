@@ -2,9 +2,12 @@ package utils
 
 import "go/ast"
 
-func GetProtoType(expr ast.Expr) string {
+func GetProtoType(expr ast.Expr, structs map[string]*ast.StructType) string {
 	switch t := expr.(type) {
 	case *ast.Ident:
+		if _, ok := structs[t.Name]; ok {
+			return t.Name // Nested struct
+		}
 		switch t.Name {
 		case "int", "int32":
 			return "int32"
@@ -32,28 +35,10 @@ func GetProtoType(expr ast.Expr) string {
 			}
 		}
 	case *ast.ArrayType:
-		if eltType, ok := t.Elt.(*ast.Ident); ok {
-			switch eltType.Name {
-			case "int32":
-				return "repeated int32"
-			case "int64":
-				return "repeated int64"
-			case "uint32":
-				return "repeated uint32"
-			case "uint64":
-				return "repeated uint64"
-			case "float32":
-				return "repeated float"
-			case "float64":
-				return "repeated double"
-			case "string":
-				return "repeated string"
-			case "bool":
-				return "repeated bool"
-			default:
-				return "repeated string"
-			}
-		}
+		elemType := GetProtoType(t.Elt, structs)
+		return "repeated " + elemType
+	case *ast.StructType:
+		return "string"
 	}
 	return "string"
 }

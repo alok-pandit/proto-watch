@@ -168,25 +168,31 @@ func processFile(outDir string, path string) {
 
 	f, err := parser.ParseFile(fset, path, src, 0)
 	if err != nil {
-		log.Printf("Failed to parse file: %s\n", path)
+		log.Println("Failed to parse file:", path, err.Error())
 		return
 	}
+
+	structs := make(map[string]*ast.StructType)
 
 	for _, decl := range f.Decls {
 		if genDecl, ok := decl.(*ast.GenDecl); ok {
 			for _, spec := range genDecl.Specs {
 				if typeSpec, ok := spec.(*ast.TypeSpec); ok {
 					if structType, ok := typeSpec.Type.(*ast.StructType); ok {
-						go convertToProto(outDir, path, typeSpec.Name.Name, structType)
+						structs[typeSpec.Name.Name] = structType
 					}
 				}
 			}
 		}
 	}
 
+	if len(structs) > 0 {
+		go convertToProto(outDir, path, structs)
+	}
+
 }
 
-func convertToProto(outDir string, path, structName string, structType *ast.StructType) {
+func convertToProto(outDir string, path string, structs map[string]*ast.StructType) {
 	protoFileName := strings.TrimSuffix(filepath.Base(path), ".go") + ".proto"
 
 	file, err := os.Create(outDir + "/" + protoFileName)
@@ -200,15 +206,16 @@ func convertToProto(outDir string, path, structName string, structType *ast.Stru
 	fmt.Fprintf(file, "syntax = \"proto3\";\n\n")
 	fmt.Fprintf(file, "package main;\n\n")
 	fmt.Fprintf(file, "import \"google/protobuf/timestamp.proto\";\n\n")
-	fmt.Fprintf(file, "message %s {\n", structName)
 
-	for i, field := range structType.Fields.List {
-		fieldType := utils.GetProtoType(field.Type)
-		for _, name := range field.Names {
-			fmt.Fprintf(file, "    %s %s = %d;\n", fieldType, name.Name, i+1)
+	for structName, structType := range structs {
+		fmt.Fprintf(file, "message %s {\n", structName)
+		for i, field := range structType.Fields.List {
+			fieldType := utils.GetProtoType(field.Type, structs)
+			for _, name := range field.Names {
+				fmt.Fprintf(file, "    %s %s = %d;\n", fieldType, name.Name, i+1)
+			}
 		}
+		fmt.Fprintf(file, "}\n\n")
 	}
-
-	fmt.Fprintf(file, "}\n")
 
 }

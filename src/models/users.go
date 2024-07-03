@@ -9,5 +9,14 @@ type User struct {
 	Password  string
 	Role      int
 	CreatedAt time.Time
-	Addresses []string
+	Addresses []Addresses
+	Children  ChildrenList
+}
+
+type Addresses struct {
+	Address string
+}
+
+type ChildrenList struct {
+	Children []string
 }
