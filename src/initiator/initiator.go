@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/alok-pandit/proto-watch/src/utils"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fsnotify/fsnotify"
@@ -33,18 +34,25 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
 	case tea.KeyMsg:
 		switch msg.String() {
+
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
+
 	}
+
 	return m, nil
 }
 
 func (m model) View() string {
+
 	style := lipgloss.NewStyle().Padding(1, 2, 1, 2)
+
 	return style.Render(fmt.Sprintf("Monitoring folder: %s\nStatus: %s\n\nPress q to quit.", m.folder, m.status))
+
 }
 
 func Initiate() {
@@ -74,6 +82,7 @@ func Initiate() {
 	}
 
 	m := model{folder: config.WatchFolder, status: "Watching for changes..."}
+
 	p := tea.NewProgram(m)
 
 	go watchFolder(config.OutFolder, config.WatchFolder, &m)
@@ -83,9 +92,10 @@ func Initiate() {
 	if err != nil {
 		log.Fatalf("Failed to start Bubble Tea program: %v", err)
 	}
+
 }
 
-func watchFolder(out string, folder string, m *model) {
+func watchFolder(outDir string, folder string, m *model) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -95,8 +105,11 @@ func watchFolder(out string, folder string, m *model) {
 	var mu sync.Mutex
 
 	go func() {
+
 		for {
+
 			select {
+
 			case event, ok := <-watcher.Events:
 				if !ok {
 					return
@@ -108,7 +121,7 @@ func watchFolder(out string, folder string, m *model) {
 					mu.Unlock()
 
 					if strings.HasSuffix(event.Name, ".go") {
-						go processFile(out, event.Name)
+						go processFile(outDir, event.Name)
 					}
 				}
 
@@ -117,8 +130,11 @@ func watchFolder(out string, folder string, m *model) {
 					return
 				}
 				log.Println("error:", err)
+
 			}
+
 		}
+
 	}()
 
 	err = watcher.Add(folder)
@@ -131,9 +147,10 @@ func watchFolder(out string, folder string, m *model) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	for _, file := range files {
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") {
-			go processFile(out, filepath.Join(folder, file.Name()))
+			go processFile(outDir, filepath.Join(folder, file.Name()))
 		}
 	}
 
@@ -148,6 +165,7 @@ func processFile(outDir string, path string) {
 	}
 
 	fset := token.NewFileSet()
+
 	f, err := parser.ParseFile(fset, path, src, 0)
 	if err != nil {
 		log.Printf("Failed to parse file: %s\n", path)
@@ -165,15 +183,18 @@ func processFile(outDir string, path string) {
 			}
 		}
 	}
+
 }
 
-func convertToProto(out string, path, structName string, structType *ast.StructType) {
+func convertToProto(outDir string, path, structName string, structType *ast.StructType) {
 	protoFileName := strings.TrimSuffix(filepath.Base(path), ".go") + ".proto"
-	file, err := os.Create(out + "/" + protoFileName)
+
+	file, err := os.Create(outDir + "/" + protoFileName)
 	if err != nil {
 		log.Printf("Failed to create proto file: %s\n", protoFileName)
 		return
 	}
+
 	defer file.Close()
 
 	fmt.Fprintf(file, "syntax = \"proto3\";\n\n")
@@ -182,67 +203,12 @@ func convertToProto(out string, path, structName string, structType *ast.StructT
 	fmt.Fprintf(file, "message %s {\n", structName)
 
 	for i, field := range structType.Fields.List {
-		fieldType := getProtoType(field.Type)
+		fieldType := utils.GetProtoType(field.Type)
 		for _, name := range field.Names {
 			fmt.Fprintf(file, "    %s %s = %d;\n", fieldType, name.Name, i+1)
 		}
 	}
 
 	fmt.Fprintf(file, "}\n")
-}
 
-func getProtoType(expr ast.Expr) string {
-	switch t := expr.(type) {
-	case *ast.Ident:
-		switch t.Name {
-		case "int", "int32":
-			return "int32"
-		case "int64":
-			return "int64"
-		case "uint", "uint32":
-			return "uint32"
-		case "uint64":
-			return "uint64"
-		case "float32":
-			return "float"
-		case "float64":
-			return "double"
-		case "string":
-			return "string"
-		case "bool":
-			return "bool"
-		default:
-			return "string"
-		}
-	case *ast.SelectorExpr:
-		if t.Sel.Name == "Time" {
-			if pkgIdent, ok := t.X.(*ast.Ident); ok && pkgIdent.Name == "time" {
-				return "google.protobuf.Timestamp"
-			}
-		}
-	case *ast.ArrayType:
-		if eltType, ok := t.Elt.(*ast.Ident); ok {
-			switch eltType.Name {
-			case "int32":
-				return "repeated int32"
-			case "int64":
-				return "repeated int64"
-			case "uint32":
-				return "repeated uint32"
-			case "uint64":
-				return "repeated uint64"
-			case "float32":
-				return "repeated float"
-			case "float64":
-				return "repeated double"
-			case "string":
-				return "repeated string"
-			case "bool":
-				return "repeated bool"
-			default:
-				return "repeated string"
-			}
-		}
-	}
-	return "string"
 }
