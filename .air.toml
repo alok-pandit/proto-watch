@@ -3,17 +3,25 @@ testdata_dir = "testdata"
 tmp_dir = "build"
 
 [build]
+include_dir = ["src"]
 args_bin = []
 bin = "./build/main"
 cmd = "go build -o ./build/main ."
 delay = 100
-exclude_dir = ["assets", "build", "vendor", "testdata", "src/docs"]
+exclude_dir = [
+    "assets",
+    "build",
+    "vendor",
+    "testdata",
+    "src/docs",
+    "proto",
+    "gen",
+]
 exclude_file = []
 exclude_regex = ["_test.go"]
 exclude_unchanged = false
 follow_symlink = false
 full_bin = ""
-include_dir = []
 include_ext = ["go", "tpl", "tmpl", "html"]
 include_file = []
 kill_delay = "0s"
