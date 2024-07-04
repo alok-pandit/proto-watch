@@ -51,17 +51,7 @@ func GetProtoType(expr ast.Expr, structs map[string]*ast.StructType) string {
 
 func ExecProtoGen(fnwos, outDir string) {
 	protoFileName := outDir + "/" + fnwos + ".proto"
-	tsFileName := outDir + "/" + fnwos + ".pb.ts"
-	cmd := exec.Command("npx", "pbjs", protoFileName, "--ts", tsFileName)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error generating TS for %s: %s\n", fnwos, err)
-		log.Println("Output:", string(out))
-		return
-	} else {
-		log.Printf("Successfully generated TS for %s: %s\n", fnwos, string(out))
-	}
+	tsFileName := "gen" + "/" + fnwos + ".pb.ts"
 
 	outd := "--go_out=."
 
@@ -75,6 +65,18 @@ func ExecProtoGen(fnwos, outDir string) {
 	} else {
 		log.Printf("Successfully generated Go for %s: %s\n", fnwos, string(out2))
 	}
+
+	cmd := exec.Command("npx", "pbjs", protoFileName, "--ts", tsFileName)
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error generating TS for %s: %s\n", fnwos, err)
+		log.Println("Output:", string(out))
+		return
+	} else {
+		log.Printf("Successfully generated TS for %s: %s\n", fnwos, string(out))
+	}
+
 }
 
 func WriteProtoMessageContent(file *os.File, structName string, structType *ast.StructType, structs map[string]*ast.StructType) {
