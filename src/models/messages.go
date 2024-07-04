@@ -1,6 +1,10 @@
 package models
 
 type Message struct {
-	ID      string
+	ID      int64
 	Message string
+}
+
+type Messages struct {
+	Messages []Message
 }

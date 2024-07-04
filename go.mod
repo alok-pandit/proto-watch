@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/spf13/viper v1.19.0
+	google.golang.org/protobuf v1.33.0
 )
 
 require (

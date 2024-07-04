@@ -23,6 +23,13 @@ type Config struct {
 	OutFolder   string `mapstructure:"out-folder"`
 }
 
+type genInputs struct {
+	path   string
+	outDir string
+}
+
+var genChan = make(chan genInputs, 1)
+
 type model struct {
 	folder string
 	status string
@@ -40,6 +47,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "q", "ctrl+c":
 			return m, tea.Quit
+
+		case "g":
+
 		}
 
 	}
@@ -86,6 +96,8 @@ func Initiate() {
 	p := tea.NewProgram(m)
 
 	go watchFolder(config.OutFolder, config.WatchFolder, &m)
+	go listenGenChan()
+	defer close(genChan)
 
 	_, err := p.Run()
 
@@ -120,7 +132,7 @@ func watchFolder(outDir string, folder string, m *model) {
 					m.status = fmt.Sprintf("File changed: %s", event.Name)
 					mu.Unlock()
 
-					if strings.HasSuffix(event.Name, ".go") {
+					if strings.HasSuffix(event.Name, ".go") && !strings.Contains(event.Name, ".pb.go") {
 						go processFile(outDir, event.Name)
 					}
 				}
@@ -149,7 +161,8 @@ func watchFolder(outDir string, folder string, m *model) {
 	}
 
 	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") {
+		log.Println("NAME", file.Name())
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") && !strings.Contains(file.Name(), ".pb.go") {
 			go processFile(outDir, filepath.Join(folder, file.Name()))
 		}
 	}
@@ -193,29 +206,35 @@ func processFile(outDir string, path string) {
 }
 
 func convertToProto(outDir string, path string, structs map[string]*ast.StructType) {
-	protoFileName := strings.TrimSuffix(filepath.Base(path), ".go") + ".proto"
+	fn := strings.TrimSuffix(filepath.Base(path), ".go")
+	protoFileName := fn + ".proto"
 
 	file, err := os.Create(outDir + "/" + protoFileName)
 	if err != nil {
-		log.Printf("Failed to create proto file: %s\n", protoFileName)
+		log.Printf("Failed to create proto file: %s %s\n", protoFileName, err.Error())
 		return
 	}
 
 	defer file.Close()
 
 	fmt.Fprintf(file, "syntax = \"proto3\";\n\n")
-	fmt.Fprintf(file, "package main;\n\n")
+	fmt.Fprintf(file, "package proto;\n\n")
+	// TODO: Get go_package from yaml file
+	fmt.Fprintf(file, "option go_package = \"./gen;gen\";\n\n")
 	fmt.Fprintf(file, "import \"google/protobuf/timestamp.proto\";\n\n")
 
 	for structName, structType := range structs {
-		fmt.Fprintf(file, "message %s {\n", structName)
-		for i, field := range structType.Fields.List {
-			fieldType := utils.GetProtoType(field.Type, structs)
-			for _, name := range field.Names {
-				fmt.Fprintf(file, "    %s %s = %d;\n", fieldType, name.Name, i+1)
-			}
-		}
-		fmt.Fprintf(file, "}\n\n")
+		utils.WriteProtoMessageContent(file, structName, structType, structs)
 	}
 
+	genChan <- genInputs{path: fn, outDir: outDir}
+
+}
+
+func listenGenChan() {
+	for input := range genChan {
+		fmt.Printf("Proto file created: %s\nOutput directory: %s\n", input.path, input.outDir)
+		go utils.ExecProtoGen(input.path, input.outDir)
+
+	}
 }
