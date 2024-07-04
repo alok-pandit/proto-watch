@@ -13,3 +13,4 @@
 build/
 proto/
 gen/
+proto-watch
