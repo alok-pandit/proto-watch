@@ -49,9 +49,9 @@ func GetProtoType(expr ast.Expr, structs map[string]*ast.StructType) string {
 	return "string"
 }
 
-func ExecProtoGen(fnwos, outDir string) {
+func ExecProtoGen(fnwos, outDir, gen string) {
 	protoFileName := outDir + "/" + fnwos + ".proto"
-	tsFileName := "gen" + "/" + fnwos + ".pb.ts"
+	tsFileName := gen + "/" + fnwos + ".pb.ts"
 
 	outd := "--go_out=."
 

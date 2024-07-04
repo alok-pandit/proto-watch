@@ -21,6 +21,7 @@ import (
 type Config struct {
 	WatchFolder string `mapstructure:"watch-folder"`
 	OutFolder   string `mapstructure:"out-folder"`
+	GenFolder   string `mapstructure:"gen-folder"`
 }
 
 type genInputs struct {
@@ -31,8 +32,9 @@ type genInputs struct {
 var genChan = make(chan genInputs, 1)
 
 type model struct {
-	folder string
-	status string
+	folder    string
+	genfolder string
+	status    string
 }
 
 func (m model) Init() tea.Cmd {
@@ -91,12 +93,19 @@ func Initiate() {
 		}
 	}
 
-	m := model{folder: config.WatchFolder, status: "Watching for changes..."}
+	if _, err := os.Stat(config.GenFolder); os.IsNotExist(err) {
+		log.Println("Folder does not exist:", config.GenFolder, "!Creating")
+		if err := os.Mkdir(config.GenFolder, 0777); err != nil {
+			log.Println("Error creating:", config.GenFolder, err.Error())
+		}
+	}
+
+	m := model{genfolder: config.GenFolder, folder: config.WatchFolder, status: "Watching for changes..."}
 
 	p := tea.NewProgram(m)
 
-	go watchFolder(config.OutFolder, config.WatchFolder, &m)
-	go listenGenChan()
+	go watchFolder(config.GenFolder, config.OutFolder, config.WatchFolder, &m)
+	go listenGenChan(config.GenFolder)
 	defer close(genChan)
 
 	_, err := p.Run()
@@ -107,7 +116,7 @@ func Initiate() {
 
 }
 
-func watchFolder(outDir string, folder string, m *model) {
+func watchFolder(genFolder, outDir, folder string, m *model) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Fatal(err)
@@ -133,7 +142,7 @@ func watchFolder(outDir string, folder string, m *model) {
 					mu.Unlock()
 
 					if strings.HasSuffix(event.Name, ".go") && !strings.Contains(event.Name, ".pb.go") {
-						go processFile(outDir, event.Name)
+						go processFile(genFolder, outDir, event.Name)
 					}
 				}
 
@@ -163,14 +172,14 @@ func watchFolder(outDir string, folder string, m *model) {
 	for _, file := range files {
 		log.Println("NAME", file.Name())
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") && !strings.Contains(file.Name(), ".pb.go") {
-			go processFile(outDir, filepath.Join(folder, file.Name()))
+			go processFile(genFolder, outDir, filepath.Join(folder, file.Name()))
 		}
 	}
 
 	<-make(chan struct{})
 }
 
-func processFile(outDir string, path string) {
+func processFile(genFolder, outDir, path string) {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		log.Printf("Failed to read file: %s\n", path)
@@ -200,12 +209,12 @@ func processFile(outDir string, path string) {
 	}
 
 	if len(structs) > 0 {
-		go convertToProto(outDir, path, structs)
+		go convertToProto(genFolder, outDir, path, structs)
 	}
 
 }
 
-func convertToProto(outDir string, path string, structs map[string]*ast.StructType) {
+func convertToProto(genFolder, outDir, path string, structs map[string]*ast.StructType) {
 	fn := strings.TrimSuffix(filepath.Base(path), ".go")
 	protoFileName := fn + ".proto"
 
@@ -220,7 +229,7 @@ func convertToProto(outDir string, path string, structs map[string]*ast.StructTy
 	fmt.Fprintf(file, "syntax = \"proto3\";\n\n")
 	fmt.Fprintf(file, "package proto;\n\n")
 	// TODO: Get go_package from yaml file
-	fmt.Fprintf(file, "option go_package = \"./gen;gen\";\n\n")
+	fmt.Fprintf(file, "option go_package = \"./"+genFolder+";gen\";\n\n")
 	fmt.Fprintf(file, "import \"google/protobuf/timestamp.proto\";\n\n")
 
 	for structName, structType := range structs {
@@ -231,9 +240,9 @@ func convertToProto(outDir string, path string, structs map[string]*ast.StructTy
 
 }
 
-func listenGenChan() {
+func listenGenChan(gen string) {
 	for input := range genChan {
 		fmt.Printf("Proto file created: %s\nOutput directory: %s\n", input.path, input.outDir)
-		go utils.ExecProtoGen(input.path, input.outDir)
+		go utils.ExecProtoGen(input.path, input.outDir, gen)
 	}
 }
