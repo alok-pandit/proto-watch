@@ -1,7 +1,7 @@
 package models
 
 type Message struct {
-	ID      int64
+	ID      string
 	Message string
 }
 

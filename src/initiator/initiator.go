@@ -160,18 +160,12 @@ func watchFolder(outDir string, folder string, m *model) {
 		log.Fatal(err)
 	}
 
-	var wg sync.WaitGroup
 	for _, file := range files {
 		log.Println("NAME", file.Name())
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") && !strings.Contains(file.Name(), ".pb.go") {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				processFile(outDir, filepath.Join(folder, file.Name()))
-			}()
+			go processFile(outDir, filepath.Join(folder, file.Name()))
 		}
 	}
-	wg.Wait()
 
 	<-make(chan struct{})
 }
@@ -241,6 +235,5 @@ func listenGenChan() {
 	for input := range genChan {
 		fmt.Printf("Proto file created: %s\nOutput directory: %s\n", input.path, input.outDir)
 		go utils.ExecProtoGen(input.path, input.outDir)
-
 	}
 }
