@@ -171,7 +171,6 @@ func watchFolder(genFolder, outDir, folder string, m *model) {
 	}
 
 	for _, file := range files {
-		log.Println("NAME", file.Name())
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") && !strings.Contains(file.Name(), ".pb.go") {
 			go processFile(genFolder, outDir, filepath.Join(folder, file.Name()))
 		}

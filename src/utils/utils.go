@@ -93,9 +93,8 @@ func WriteProtoMessageContent(file *os.File, structName string, structType *ast.
 }
 
 func WriteProtoServiceContent(file *os.File, name string, serviceMap map[string]int) {
-	fName := strings.ReplaceAll(file.Name(), "proto", "")
-	fName = strings.ReplaceAll(fName, "/", "")
-	fName = strings.ReplaceAll(fName, ".", "")
+	f := strings.Split(file.Name(), "/")
+	fName := strings.ReplaceAll(f[len(f)-1], ".proto", "")
 	fmt.Fprintf(file, "service %sService {\n", fName)
 
 	for name := range serviceMap {
