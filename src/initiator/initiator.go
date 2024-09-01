@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -232,12 +233,22 @@ func convertToProto(genFolder, outDir, path string, structs map[string]*ast.Stru
 	fmt.Fprintf(file, "option go_package = \"./"+genFolder+";gen\";\n\n")
 	fmt.Fprintf(file, "import \"google/protobuf/timestamp.proto\";\n\n")
 
+	requestRegex := regexp.MustCompile(`^[a-zA-Z]+(Request)$`)
+	responseRegex := regexp.MustCompile(`^[a-zA-Z]+(Response)$`)
+
+	serviceMap := make(map[string]int)
+	var name string
 	for structName, structType := range structs {
+
+		name = utils.RegexMatcher(requestRegex, responseRegex, structName, serviceMap)
+
 		utils.WriteProtoMessageContent(file, structName, structType, structs)
+
 	}
 
-	genChan <- genInputs{path: fn, outDir: outDir}
+	utils.WriteProtoServiceContent(file, name, serviceMap)
 
+	genChan <- genInputs{path: fn, outDir: outDir}
 }
 
 func listenGenChan(gen string) {

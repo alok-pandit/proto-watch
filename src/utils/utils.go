@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
+	"strings"
 )
 
 func GetProtoType(expr ast.Expr, structs map[string]*ast.StructType) string {
@@ -88,4 +90,30 @@ func WriteProtoMessageContent(file *os.File, structName string, structType *ast.
 		}
 	}
 	fmt.Fprintf(file, "}\n\n")
+}
+
+func WriteProtoServiceContent(file *os.File, name string, serviceMap map[string]int) {
+	fName := strings.ReplaceAll(file.Name(), "proto", "")
+	fName = strings.ReplaceAll(fName, "/", "")
+	fName = strings.ReplaceAll(fName, ".", "")
+	fmt.Fprintf(file, "service %sService {\n", fName)
+
+	for name := range serviceMap {
+		fmt.Fprintf(file, "  rpc %s(%sRequest) returns (%sResponse);\n", name, name, name)
+	}
+
+	fmt.Fprintf(file, "}\n")
+}
+
+func RegexMatcher(requestRegex *regexp.Regexp, responseRegex *regexp.Regexp, structName string, serviceMap map[string]int) string {
+	var name string
+	if matchedReq := requestRegex.MatchString(structName); matchedReq {
+		name = strings.Replace(structName, "Request", "", 1)
+		serviceMap[name]++
+	}
+	if matchedRes := responseRegex.MatchString(structName); matchedRes {
+		name = strings.Replace(structName, "Response", "", 1)
+		serviceMap[name]++
+	}
+	return name
 }
