@@ -252,7 +252,7 @@ func convertToProto(genFolder, outDir, path string, structs map[string]*ast.Stru
 
 func listenGenChan(gen string) {
 	for input := range genChan {
-		fmt.Printf("Proto file created: %s\nOutput directory: %s\n", input.path, input.outDir)
+		fmt.Printf("\nProto file created: %s\nOutput directory: %s\n\n", input.path, input.outDir)
 		go utils.ExecProtoGen(input.path, input.outDir, gen)
 	}
 }
