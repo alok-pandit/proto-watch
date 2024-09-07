@@ -53,7 +53,7 @@ func GetProtoType(expr ast.Expr, structs map[string]*ast.StructType) string {
 
 func ExecProtoGen(fnwos, outDir, gen string) {
 	protoFileName := outDir + "/" + fnwos + ".proto"
-	// tsFileName := gen + "/" + fnwos + ".pb.ts"
+	tsFileName := gen + "/" + fnwos + ".pb.ts"
 
 	outd := "--go_out=."
 
@@ -68,16 +68,16 @@ func ExecProtoGen(fnwos, outDir, gen string) {
 		log.Printf("Successfully generated Go for %s: %s\n", fnwos, string(out2))
 	}
 
-	// cmd := exec.Command("npx", "pbjs", protoFileName, "--ts", tsFileName)
+	cmd := exec.Command("npx", "pbjs", protoFileName, "--ts", tsFileName)
 
-	// out, err := cmd.CombinedOutput()
-	// if err != nil {
-	// 	log.Printf("Error generating TS for %s: %s\n", fnwos, err)
-	// 	log.Println("Output:", string(out))
-	// 	return
-	// } else {
-	// 	log.Printf("Successfully generated TS for %s: %s\n", fnwos, string(out))
-	// }
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error generating TS for %s: %s\n", fnwos, err)
+		log.Println("Output:", string(out))
+		return
+	} else {
+		log.Printf("Successfully generated TS for %s: %s\n", fnwos, string(out))
+	}
 
 }
 
