@@ -23,6 +23,7 @@ type Config struct {
 	WatchFolder string `mapstructure:"watch-folder"`
 	OutFolder   string `mapstructure:"out-folder"`
 	GenFolder   string `mapstructure:"gen-folder"`
+	GenFolderTs string `mapstructure:"gen-folder-ts"`
 }
 
 type genInputs struct {
@@ -33,9 +34,10 @@ type genInputs struct {
 var genChan = make(chan genInputs, 1)
 
 type model struct {
-	folder    string
-	genfolder string
-	status    string
+	folder      string
+	genfolder   string
+	genfolderts string
+	status      string
 }
 
 func (m model) Init() tea.Cmd {
@@ -101,12 +103,19 @@ func Initiate() {
 		}
 	}
 
-	m := model{genfolder: config.GenFolder, folder: config.WatchFolder, status: "Watching for changes..."}
+	if _, err := os.Stat(config.GenFolderTs); os.IsNotExist(err) {
+		log.Println("Folder does not exist:", config.GenFolderTs, "!Creating")
+		if err := os.Mkdir(config.GenFolderTs, 0777); err != nil {
+			log.Println("Error creating:", config.GenFolderTs, err.Error())
+		}
+	}
+
+	m := model{genfolderts: config.GenFolderTs, genfolder: config.GenFolder, folder: config.WatchFolder, status: "Watching for changes..."}
 
 	p := tea.NewProgram(m)
 
 	go watchFolder(config.GenFolder, config.OutFolder, config.WatchFolder, &m)
-	go listenGenChan(config.GenFolder)
+	go listenGenChan(config.GenFolderTs)
 	defer close(genChan)
 
 	_, err := p.Run()

@@ -1,3 +1,4 @@
 watch-folder: "src/models"
 out-folder: "proto"
 gen-folder: "gen"
+gen-folder-ts: "ts-gen"
