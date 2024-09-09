@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -85,8 +86,8 @@ func WriteProtoMessageContent(file *os.File, structName string, structType *ast.
 	fmt.Fprintf(file, "message %s {\n", structName)
 	for i, field := range structType.Fields.List {
 		fieldType := GetProtoType(field.Type, structs)
-		for _, name := range field.Names {
-			fmt.Fprintf(file, "    %s %s = %d;\n", fieldType, name.Name, i+1)
+		for range field.Names {
+			fmt.Fprintf(file, "    %s %s = %d;\n", fieldType, getJsonTag(field), i+1)
 		}
 	}
 	fmt.Fprintf(file, "}\n\n")
@@ -115,4 +116,18 @@ func RegexMatcher(requestRegex *regexp.Regexp, responseRegex *regexp.Regexp, str
 		serviceMap[name]++
 	}
 	return name
+}
+
+func getJsonTag(field *ast.Field) string {
+	if field.Tag != nil {
+		tagValue := reflect.StructTag(strings.Trim(field.Tag.Value, "`")).Get("json")
+		if tagValue != "" && tagValue != "-" { // Ensure it's not omitted with "-"
+			return strings.Split(tagValue, ",")[0]
+		}
+	}
+	// Fallback to the field name if no JSON tag is present
+	if len(field.Names) > 0 {
+		return field.Names[0].Name
+	}
+	return ""
 }
