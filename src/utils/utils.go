@@ -58,6 +58,18 @@ func ExecProtoGen(fnwos, outDir, gen string) {
 
 	outd := "--go_out=."
 
+	protoDirForHookCreation := "--proto-dir=./" + outDir
+
+	cmd3 := exec.Command("./hook-gen", protoDirForHookCreation)
+
+	out3, err3 := cmd3.CombinedOutput()
+	if err3 != nil {
+		log.Printf("Error generating hooks for %s: %s\n", fnwos, err3)
+		log.Println("Output:", string(out3))
+	} else {
+		log.Printf("Successfully generated hooks for %s: %s\n", fnwos, string(out3))
+	}
+
 	// cmd2 := exec.Command("protoc", outd, "--go_opt=paths=source_relative", protoFileName)
 	cmd2 := exec.Command("protoc", outd, protoFileName)
 

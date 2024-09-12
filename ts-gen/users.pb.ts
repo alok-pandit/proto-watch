@@ -1,3 +1,50 @@
+export interface Addresses {
+  Address?: string;
+}
+
+export function encodeAddresses(message: Addresses): Uint8Array {
+  let bb = popByteBuffer();
+  _encodeAddresses(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodeAddresses(message: Addresses, bb: ByteBuffer): void {
+  // optional string Address = 1;
+  let $Address = message.Address;
+  if ($Address !== undefined) {
+    writeVarint32(bb, 10);
+    writeString(bb, $Address);
+  }
+}
+
+export function decodeAddresses(binary: Uint8Array): Addresses {
+  return _decodeAddresses(wrapByteBuffer(binary));
+}
+
+function _decodeAddresses(bb: ByteBuffer): Addresses {
+  let message: Addresses = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional string Address = 1;
+      case 1: {
+        message.Address = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
 export interface LoginRequest {
   Email?: string;
   Password?: string;
@@ -48,53 +95,6 @@ function _decodeLoginRequest(bb: ByteBuffer): LoginRequest {
       // optional string Password = 2;
       case 2: {
         message.Password = readString(bb, readVarint32(bb));
-        break;
-      }
-
-      default:
-        skipUnknownField(bb, tag & 7);
-    }
-  }
-
-  return message;
-}
-
-export interface LoginResponse {
-  Token?: string;
-}
-
-export function encodeLoginResponse(message: LoginResponse): Uint8Array {
-  let bb = popByteBuffer();
-  _encodeLoginResponse(message, bb);
-  return toUint8Array(bb);
-}
-
-function _encodeLoginResponse(message: LoginResponse, bb: ByteBuffer): void {
-  // optional string Token = 1;
-  let $Token = message.Token;
-  if ($Token !== undefined) {
-    writeVarint32(bb, 10);
-    writeString(bb, $Token);
-  }
-}
-
-export function decodeLoginResponse(binary: Uint8Array): LoginResponse {
-  return _decodeLoginResponse(wrapByteBuffer(binary));
-}
-
-function _decodeLoginResponse(bb: ByteBuffer): LoginResponse {
-  let message: LoginResponse = {} as any;
-
-  end_of_message: while (!isAtEnd(bb)) {
-    let tag = readVarint32(bb);
-
-    switch (tag >>> 3) {
-      case 0:
-        break end_of_message;
-
-      // optional string Token = 1;
-      case 1: {
-        message.Token = readString(bb, readVarint32(bb));
         break;
       }
 
@@ -456,53 +456,6 @@ function _decodeUser(bb: ByteBuffer): User {
   return message;
 }
 
-export interface Addresses {
-  Address?: string;
-}
-
-export function encodeAddresses(message: Addresses): Uint8Array {
-  let bb = popByteBuffer();
-  _encodeAddresses(message, bb);
-  return toUint8Array(bb);
-}
-
-function _encodeAddresses(message: Addresses, bb: ByteBuffer): void {
-  // optional string Address = 1;
-  let $Address = message.Address;
-  if ($Address !== undefined) {
-    writeVarint32(bb, 10);
-    writeString(bb, $Address);
-  }
-}
-
-export function decodeAddresses(binary: Uint8Array): Addresses {
-  return _decodeAddresses(wrapByteBuffer(binary));
-}
-
-function _decodeAddresses(bb: ByteBuffer): Addresses {
-  let message: Addresses = {} as any;
-
-  end_of_message: while (!isAtEnd(bb)) {
-    let tag = readVarint32(bb);
-
-    switch (tag >>> 3) {
-      case 0:
-        break end_of_message;
-
-      // optional string Address = 1;
-      case 1: {
-        message.Address = readString(bb, readVarint32(bb));
-        break;
-      }
-
-      default:
-        skipUnknownField(bb, tag & 7);
-    }
-  }
-
-  return message;
-}
-
 export interface ChildrenList {
   Children?: string[];
 }
@@ -542,6 +495,53 @@ function _decodeChildrenList(bb: ByteBuffer): ChildrenList {
       case 1: {
         let values = message.Children || (message.Children = []);
         values.push(readString(bb, readVarint32(bb)));
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
+export interface LoginResponse {
+  Token?: string;
+}
+
+export function encodeLoginResponse(message: LoginResponse): Uint8Array {
+  let bb = popByteBuffer();
+  _encodeLoginResponse(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodeLoginResponse(message: LoginResponse, bb: ByteBuffer): void {
+  // optional string Token = 1;
+  let $Token = message.Token;
+  if ($Token !== undefined) {
+    writeVarint32(bb, 10);
+    writeString(bb, $Token);
+  }
+}
+
+export function decodeLoginResponse(binary: Uint8Array): LoginResponse {
+  return _decodeLoginResponse(wrapByteBuffer(binary));
+}
+
+function _decodeLoginResponse(bb: ByteBuffer): LoginResponse {
+  let message: LoginResponse = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional string Token = 1;
+      case 1: {
+        message.Token = readString(bb, readVarint32(bb));
         break;
       }
 
